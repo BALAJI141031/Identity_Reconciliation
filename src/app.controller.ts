@@ -1,12 +1,20 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AppService } from './app.service';
+import { CreateContactDto } from './dto';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  @Post('identify')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  createContact(@Body() createContactDto: CreateContactDto): Promise<any> {
+    return this.appService.createContact(createContactDto);
   }
 }

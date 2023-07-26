@@ -1,8 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { CreateContactDto } from './dto';
 
 @Injectable()
 export class AppService {
-  getHello(): string {
+  async createContact(createContactDto: CreateContactDto): Promise<string> {
+    const { email, phoneNumber } = createContactDto;
+    if (!email && !phoneNumber) {
+      throw new BadRequestException(
+        'Email Or PhoneNUmber is Require To Create Contact',
+      );
+    }
     return 'Hello World!';
   }
 }
