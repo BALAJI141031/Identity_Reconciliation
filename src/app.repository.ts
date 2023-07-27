@@ -36,4 +36,9 @@ export class ContactDao {
       where,
     });
   }
+  async getContacts(where: Prisma.ContactWhereInput) {
+    return await this.prisma.contact.findMany({
+      where,
+    });
+  }
 }
