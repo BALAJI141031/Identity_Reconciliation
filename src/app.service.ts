@@ -282,16 +282,41 @@ export class AppService {
         ...exisitingContactWithPhone,
       ].sort((a, b) => a.id - b.id);
 
-      const updatedCombinationContacts = combinationContacts.map(
-        (contact, i) => {
+      let ids = [];
+      let phoneNumbers = [];
+      let emailCombination = [];
+      const updatedCombinationContacts = await Promise.all(
+        combinationContacts.map(async (contact, i) => {
           if (i !== 0) {
+            ids.push(contact.id);
+            phoneNumbers.push(contact.phoneNumber);
+            emailCombination.push(contact.email);
             contact.linkPrecedence = LinkPrecedence.secondary;
             contact.linkedId = combinationContacts[0].id;
+            await this.contactRepository.update(
+              { id: contact.id },
+              {
+                linkPrecedence: LinkPrecedence.secondary,
+                linkedId: combinationContacts[0].id,
+              },
+            );
+            return contact;
           }
           return contact;
-        },
+        }),
       );
-      // updated db to mark secondary to primary
+
+      return {
+        contact: {
+          primaryContatctId: updatedCombinationContacts[0].id,
+          emails: [updatedCombinationContacts[0].email, ...emailCombination],
+          phoneNumbers: [
+            updatedCombinationContacts[0].phoneNumber,
+            ...phoneNumbers,
+          ],
+          secondaryContactIds: [...ids],
+        },
+      };
     } catch (error) {
       throw new InternalServerErrorException(
         `Server Error, error is ${error?.message}`,

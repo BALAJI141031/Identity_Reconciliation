@@ -41,4 +41,7 @@ export class ContactDao {
       where,
     });
   }
+  async update(where: Prisma.ContactWhereUniqueInput, data: any) {
+    return await this.prisma.contact.update({ where, data });
+  }
 }
