@@ -21,7 +21,7 @@ model Contact {
   deletedAt      DateTime?
 }
 
-export enum LinkPrecedence {
+ enum LinkPrecedence {
   primary
   secondary
 }
