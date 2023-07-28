@@ -20,8 +20,10 @@ export class AppService {
     return {
       contact: {
         primaryContatctId: primaryContact.id,
-        emails: [primaryContact.email, ...emails],
-        phoneNumbers: [primaryContact.phoneNumber, ...phoneNumbers],
+        emails: Array.from(new Set([primaryContact.email, ...emails])),
+        phoneNumbers: Array.from(
+          new Set([primaryContact.phoneNumber, ...phoneNumbers]),
+        ),
         secondaryContactIds: [...ids],
       },
     };
