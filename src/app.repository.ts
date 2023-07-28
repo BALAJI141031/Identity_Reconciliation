@@ -36,6 +36,14 @@ export class ContactDao {
       where,
     });
   }
+  async getPrimaryContacts(
+    where: Prisma.ContactWhereInput,
+  ): Promise<Contact[] | []> {
+    return await this.prisma.contact.findMany({
+      where,
+    });
+  }
+
   async getContacts(where: Prisma.ContactWhereInput) {
     return await this.prisma.contact.findMany({
       where,

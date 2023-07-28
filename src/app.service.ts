@@ -11,6 +11,22 @@ import { PrismaClient, Contact, LinkPrecedence } from '@prisma/client';
 export class AppService {
   @Inject(ContactDao)
   private contactRepository: ContactDao;
+  private buildResponse(primaryContact: any, secondaryContacts?: any[]): any {
+    const emails = secondaryContacts?.map((contact) => contact.email) || [];
+    const phoneNumbers =
+      secondaryContacts?.map((contact) => contact.phoneNumber) || [];
+    const ids = secondaryContacts?.map((contact) => contact.id) || [];
+
+    return {
+      contact: {
+        primaryContatctId: primaryContact.id,
+        emails: [primaryContact.email, ...emails],
+        phoneNumbers: [primaryContact.phoneNumber, ...phoneNumbers],
+        secondaryContactIds: [...ids],
+      },
+    };
+  }
+
   async createContact(createContactDto: CreateContactDto): Promise<any> {
     try {
       const { email, phoneNumber } = createContactDto;
@@ -28,14 +44,7 @@ export class AppService {
             email,
             linkPrecedence: LinkPrecedence.primary,
           });
-          return {
-            contact: {
-              primaryContatctId: contact.id,
-              emails: [contact.email],
-              phoneNumbers: [contact.phoneNumber],
-              secondaryContactIds: [],
-            },
-          };
+          return this.buildResponse(contact);
         }
         const primaryContact = exisitingContactWithEmail.filter(
           (contact) => contact.linkPrecedence == LinkPrecedence.primary,
@@ -44,42 +53,15 @@ export class AppService {
           const secondaryContacts = await this.contactRepository.getContacts({
             linkedId: primaryContact[0].id,
           });
-          const emails = secondaryContacts?.map((contact) => contact.email);
-          const phoneNumbers = secondaryContacts?.map(
-            (contact) => contact.phoneNumber,
-          );
-          const ids = secondaryContacts?.map((contact) => contact.id);
-          //Todo fetch linked id's as well
-          return {
-            contact: {
-              primaryContatctId: primaryContact[0].id,
-              emails: [primaryContact[0].email, ...emails],
-              phoneNumbers: [primaryContact[0].phoneNumber, ...phoneNumbers],
-              secondaryContactIds: [...ids],
-            },
-          };
+          return this.buildResponse(primaryContact[0], secondaryContacts);
         } else {
           const linkId = exisitingContactWithEmail[0].linkedId;
-          const emails = exisitingContactWithEmail?.map(
-            (contact) => contact.email,
-          );
-          const phoneNumbers = exisitingContactWithEmail?.map(
-            (contact) => contact.phoneNumber,
-          );
-          const ids = exisitingContactWithEmail?.map((contact) => contact.id);
           const primaryContact = await this.contactRepository.getPrimaryContact(
             {
               id: linkId,
             },
           );
-          return {
-            contact: {
-              primaryContatctId: primaryContact.id,
-              emails: [primaryContact.email, ...emails],
-              phoneNumbers: [primaryContact.phoneNumber, ...phoneNumbers],
-              secondaryContactIds: [...ids],
-            },
-          };
+          return this.buildResponse(primaryContact, exisitingContactWithEmail);
         }
       }
 
@@ -91,14 +73,7 @@ export class AppService {
             phoneNumber,
             linkPrecedence: LinkPrecedence.primary,
           });
-          return {
-            contact: {
-              primaryContatctId: contact.id,
-              emails: [contact.email],
-              phoneNumbers: [contact.phoneNumber],
-              secondaryContactIds: [],
-            },
-          };
+          return this.buildResponse(contact);
         }
         const primaryContact = exisitingContactWithPhone.filter(
           (contact) => contact.linkPrecedence == LinkPrecedence.primary,
@@ -106,21 +81,7 @@ export class AppService {
         const secondaryContacts = await this.contactRepository.getContacts({
           linkedId: primaryContact[0].id,
         });
-
-        const emails = secondaryContacts?.map((contact) => contact.email);
-        const phoneNumbers = secondaryContacts?.map(
-          (contact) => contact.phoneNumber,
-        );
-        const ids = secondaryContacts?.map((contact) => contact.id);
-        //Todo fetch linked id's as well
-        return {
-          contact: {
-            primaryContatctId: primaryContact[0].id,
-            emails: [primaryContact[0].email, ...emails],
-            phoneNumbers: [primaryContact[0].phoneNumber, ...phoneNumbers],
-            secondaryContactIds: [...ids],
-          },
-        };
+        return this.buildResponse(primaryContact[0], secondaryContacts);
       }
 
       const existingContactWithSameDetails =
@@ -134,22 +95,10 @@ export class AppService {
         const secondaryContacts = await this.contactRepository.getContacts({
           linkedId: existingContactWithSameDetails.id,
         });
-        const emails = secondaryContacts?.map((contact) => contact.email);
-        const phoneNumbers = secondaryContacts?.map(
-          (contact) => contact.phoneNumber,
+        return this.buildResponse(
+          existingContactWithSameDetails,
+          secondaryContacts,
         );
-        const ids = secondaryContacts?.map((contact) => contact.id);
-        return {
-          contact: {
-            primaryContatctId: existingContactWithSameDetails.id,
-            emails: [existingContactWithSameDetails.email, ...emails],
-            phoneNumbers: [
-              existingContactWithSameDetails.phoneNumber,
-              ...phoneNumbers,
-            ],
-            secondaryContactIds: [...ids],
-          },
-        };
       } else {
         const existingSecondaryContactWithSameDetails =
           await this.contactRepository.getContactByEmailAndPhone({
@@ -168,23 +117,11 @@ export class AppService {
           const secondaryContacts = await this.contactRepository.getContacts({
             linkedId: primaryContact.id,
           });
-          const emails = secondaryContacts?.map((contact) => contact.email);
-          const phoneNumbers = secondaryContacts?.map(
-            (contact) => contact.phoneNumber,
-          );
-          const ids = secondaryContacts?.map((contact) => contact.id);
-          return {
-            contact: {
-              primaryContatctId: primaryContact.id,
-              emails: [primaryContact.email, ...emails],
-              phoneNumbers: [primaryContact.phoneNumber, ...phoneNumbers],
-              secondaryContactIds: [...ids],
-            },
-          };
+          return this.buildResponse(primaryContact, secondaryContacts);
         }
       }
-      // so email & phone combination is not there
 
+      // so email & phone combination is not there
       // checking for email Combination
       const exisitingContactWithEmail =
         await this.contactRepository.getContactByEmailOrPhone(email);
@@ -199,14 +136,7 @@ export class AppService {
           phoneNumber,
           linkPrecedence: LinkPrecedence.primary,
         });
-        return {
-          contact: {
-            primaryContatctId: contact.id,
-            emails: [contact.email],
-            phoneNumbers: [contact.phoneNumber],
-            secondaryContactIds: [],
-          },
-        };
+        return this.buildResponse(contact);
       }
 
       // create secondary contact with new mobile
@@ -229,75 +159,118 @@ export class AppService {
           linkPrecedence: LinkPrecedence.secondary,
           linkedId: primaryAccount.id,
         });
-        const emails = secondaryContacts?.map((contact) => contact.email);
-        const phoneNumbers = secondaryContacts?.map(
-          (contact) => contact.phoneNumber,
-        );
-        const ids = secondaryContacts?.map((contact) => contact.id);
-        return {
-          contact: {
-            primaryContatctId: primaryAccount.id,
-            emails: [primaryAccount.email, ...emails],
-            phoneNumbers: [primaryAccount.phoneNumber, ...phoneNumbers],
-            secondaryContactIds: [...ids],
-          },
-        };
+        return this.buildResponse(primaryAccount, secondaryContacts);
       }
       // create secondary contact with new email
       if (
         !exisitingContactWithEmail.length &&
         exisitingContactWithPhone.length
       ) {
-        const primaryAccount = await this.contactRepository.getPrimaryContact({
-          linkPrecedence: LinkPrecedence.primary,
-          phoneNumber,
-        });
+        const isPrimaryContact = exisitingContactWithPhone.filter(
+          (contact) => contact.linkPrecedence == LinkPrecedence.primary,
+        );
+        if (!isPrimaryContact.length) {
+          const primaryAccount = await this.contactRepository.getPrimaryContact(
+            {
+              linkPrecedence: LinkPrecedence.primary,
+              id: exisitingContactWithPhone[0].linkedId,
+            },
+          );
+          await this.contactRepository.createContact({
+            email,
+            phoneNumber,
+            linkPrecedence: LinkPrecedence.secondary,
+            linkedId: primaryAccount.id,
+          });
+          const secondaryContacts = await this.contactRepository.getContacts({
+            linkPrecedence: LinkPrecedence.secondary,
+            linkedId: primaryAccount.id,
+          });
+          return this.buildResponse(primaryAccount, secondaryContacts);
+        }
         await this.contactRepository.createContact({
           email,
           phoneNumber,
           linkPrecedence: LinkPrecedence.secondary,
-          linkedId: primaryAccount.id,
+          linkedId: isPrimaryContact[0].id,
         });
         const secondaryContacts = await this.contactRepository.getContacts({
           linkPrecedence: LinkPrecedence.secondary,
-          linkedId: primaryAccount.id,
+          linkedId: isPrimaryContact[0].id,
         });
-        const emails = secondaryContacts?.map((contact) => contact.email);
-        const phoneNumbers = secondaryContacts?.map(
-          (contact) => contact.phoneNumber,
-        );
-        const ids = secondaryContacts?.map((contact) => contact.id);
-        return {
-          contact: {
-            primaryContatctId: primaryAccount.id,
-            emails: [primaryAccount.email, ...emails],
-            phoneNumbers: [primaryAccount.phoneNumber, ...phoneNumbers],
-            secondaryContactIds: [...ids],
-          },
-        };
+        return this.buildResponse(isPrimaryContact[0], secondaryContacts);
       }
 
-      const combinationContacts = [
+      const PrimaryContactOfEmail = exisitingContactWithEmail.filter(
+        (contact) => contact.linkPrecedence == LinkPrecedence.primary,
+      );
+      let secondary = [];
+      if (PrimaryContactOfEmail.length) {
+        const contacts = await this.contactRepository.getContacts({
+          linkedId: PrimaryContactOfEmail[0].id,
+        });
+        secondary = [...contacts];
+      } else {
+        const contacts = await this.contactRepository.getContacts({
+          linkedId: exisitingContactWithEmail[0].linkedId,
+        });
+        // what happens here more than 2 primary
+        const primaryContact = await this.contactRepository.getPrimaryContact({
+          linkPrecedence: LinkPrecedence.primary,
+          id: exisitingContactWithEmail[0].linkedId,
+        });
+        secondary = [...contacts, primaryContact];
+      }
+
+      const primaryContactOfPhone = exisitingContactWithPhone.filter(
+        (contact) => contact.linkPrecedence == LinkPrecedence.primary,
+      );
+
+      if (primaryContactOfPhone.length) {
+        const contacts = await this.contactRepository.getContacts({
+          linkedId: primaryContactOfPhone[0].id,
+        });
+        secondary = [...secondary, ...contacts];
+      } else {
+        const contacts = await this.contactRepository.getContacts({
+          linkedId: exisitingContactWithPhone[0].linkedId,
+        });
+        const primaryContact = await this.contactRepository.getPrimaryContact({
+          linkPrecedence: LinkPrecedence.primary,
+          id: exisitingContactWithPhone[0].linkedId,
+        });
+        secondary = [...secondary, ...contacts, primaryContact];
+      }
+
+      const uniqueArray = [
         ...exisitingContactWithEmail,
         ...exisitingContactWithPhone,
-      ].sort((a, b) => a.id - b.id);
+        ...secondary,
+      ]
+        .reduce((accumulator, currentValue) => {
+          if (!accumulator.some((obj) => obj.id === currentValue.id)) {
+            accumulator.push(currentValue);
+          }
+          return accumulator;
+        }, [])
+        .sort((a, b) => a.id - b.id);
 
       let ids = [];
       let phoneNumbers = [];
       let emailCombination = [];
       const updatedCombinationContacts = await Promise.all(
-        combinationContacts.map(async (contact, i) => {
+        uniqueArray.map(async (contact, i) => {
           if (i !== 0) {
             ids.push(contact.id);
             phoneNumbers.push(contact.phoneNumber);
             emailCombination.push(contact.email);
             contact.linkPrecedence = LinkPrecedence.secondary;
-            contact.linkedId = combinationContacts[0].id;
+            contact.linkedId = uniqueArray[0].id;
             await this.contactRepository.update(
               { id: contact.id },
               {
                 linkPrecedence: LinkPrecedence.secondary,
-                linkedId: combinationContacts[0].id,
+                linkedId: uniqueArray[0].id,
               },
             );
             return contact;
@@ -305,18 +278,12 @@ export class AppService {
           return contact;
         }),
       );
-
-      return {
-        contact: {
-          primaryContatctId: updatedCombinationContacts[0].id,
-          emails: [updatedCombinationContacts[0].email, ...emailCombination],
-          phoneNumbers: [
-            updatedCombinationContacts[0].phoneNumber,
-            ...phoneNumbers,
-          ],
-          secondaryContactIds: [...ids],
-        },
-      };
+      const updatedCombinationContactsClone = [...updatedCombinationContacts];
+      updatedCombinationContactsClone.shift();
+      return this.buildResponse(
+        updatedCombinationContacts[0],
+        updatedCombinationContactsClone,
+      );
     } catch (error) {
       throw new InternalServerErrorException(
         `Server Error, error is ${error?.message}`,
