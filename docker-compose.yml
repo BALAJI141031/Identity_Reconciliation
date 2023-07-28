@@ -5,18 +5,21 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '5433:5432'
+      - '3009:3009'
     depends_on:
       - postgres_db
     environment:
-      - DATABASE_URL=postgresql://your_username:your_password@localhost:5432/reconcile_db?schema=public
+      - DATABASE_URL=postgresql://your_username:your_password@postgres:5432/reconcile_db?schema=public
 
   postgres_db:
     image: postgres:latest
+    container_name: postgres
     environment:
       - POSTGRES_USER=your_username
       - POSTGRES_PASSWORD=your_password
       - POSTGRES_DB=reconcile_db
+    ports:
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
