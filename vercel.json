@@ -8,12 +8,11 @@
   ],
   "routes": [
     {
-      "src": "/Identify",
-      "dest": "/dist/main.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "src/main.ts"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
